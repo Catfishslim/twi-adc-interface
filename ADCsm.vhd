@@ -62,6 +62,10 @@ architecture Behavioral of ADC_controller is
 					if(falling_edge(done_o)) then
 						next_state <= readSig;
 					end if;
+				when readSig =>
+					if(falling_edge(done_o)) then
+						next_state <= msbRead;
+					end if;
 				when msbRead =>
 					if(falling_edge(done_o)) then
 						next_state <= lsbRead;
