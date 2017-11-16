@@ -15,12 +15,12 @@ entity adc_controller is
 				a_i     : out std_logic_vector(7 downto 0);
 				d_i     : out std_logic_vector(7 downto 0);
 				data_out: out std_logic_vector(15 downto 0));
-end ADC_controller;
+end adc_controller;
 
 
 architecture behavior of ADC_controller is
 	
-	type state_type is (waiting, A, B, C, D, E, F, G, H, I);
+	type state_type is (waiting, addressWrite, resetState, resetWait, configWrite, configWait, startRead, msgLow, msbRead, lsbRead);
 	signal present_state, next_state : state_type;
 
 	constant addrAD2	 : STD_LOGIC_VECTOR(6 downto 0) := "0101000";	-- TWI address for the ADC
@@ -35,7 +35,7 @@ architecture behavior of ADC_controller is
   	procedure waitclocks(signal clock : std_logic;
              	          N : INTEGER) is
 			begin
-				for i in 1 to N loop
+				for lsbRead in 1 to N loop
 					wait until falling_edge(clock);	
 				end loop;
 	end waitclocks;
@@ -67,72 +67,72 @@ architecture behavior of ADC_controller is
 		begin
 		count_reset <= '0';
 			case(present_state) is
-				WHEN A =>
+				WHEN addressWrite =>
 					if(count < 10) then
 						next_state <= present_state;
 					else
-						next_state <= B;-- waitclocks(clk_sig, 10);
+						next_state <= resetState;-- waitclocks(clk_sig, 10);
 						count_reset <= '1';-- reset counter		-- activate reset
 					end if;
 
-				WHEN B =>			
+				WHEN resetState =>			
 					if(count < 2) then
 						next_state <= present_state;
 					else
-						next_state <= C;--waitclocks(clk_sig, 2);
+						next_state <= resetWait;--waitclocks(clk_sig, 2);
 						count_reset <= '1';-- reset counter
 					end if;
 						
-				WHEN C =>
+				WHEN resetWait =>
 					if(count < 1200) then
 						next_state <= present_state;
 					else
-						next_state <= D;			-- wait > 1000 clocks for bus to be "free"
+						next_state <= configWrite;			-- wait > 1000 clocks for bus to be "free"
 						count_reset <= '1';-- reset counter 
 					end if;
 					
-				WHEN D =>
+				WHEN configWrite =>
 					if(count < 2) then
 						next_state <= present_state;
 					else
-						next_state <= E;--waitclocks(clk_sig, 2);							-- two cycles for strobe to be captured
+						next_state <= configWait;--waitclocks(clk_sig, 2);							-- two cycles for strobe to be captured
 						count_reset <= '1';-- reset counter
 					end if;
-				WHEN E =>
+				WHEN configWait =>
 					if(DONE_O'event and DONE_O='0') then -- wait until DONE_O_sig'event and DONE_O_sig='0';	-- wait until TWI controller signals done
-						next_state <= F;
+						next_state <= startRead;
 						count_reset <= '1';-- reset the counter
 					else
 						next_state <= present_state;
 					end if;
-				WHEN F =>
+				WHEN startRead =>
 					if(count < 2) then
 						next_state <= present_state;
 					else
-						next_state <= G;-- waitclocks(clk_sig, 2);
+						next_state <= msgLow;-- waitclocks(clk_sig, 2);
 						count_reset <= '1';-- reset thec counter					-- two cycles for message to be captured			
 					end if;
-				WHEN G =>			
+				WHEN msgLow =>			
 					if(DONE_O'event and DONE_O='0')then-- wait until DONE_O_sig'event and DONE_O_sig='0';	-- wait until TWI controller signals done
-						next_state <= H;
+						next_state <= msbRead;
 						count_reset <= '1';-- reset the counter					
 					else
 						next_state <= present_state;
 					end if;
-				WHEN H =>
+				WHEN msbRead =>
 					if(count > 510) then-- waitclocks(clk_sig, 510);						-- you have to go past 1/2 SCL cycle before dropping
-						next_state <= I;
+						next_state <= lsbRead;
 						count_reset <= '1';
 					else
 						next_state <= present_state;
 					end if;
-				WHEN I =>
+				WHEN lsbRead =>
 					next_state <= waiting;
 					count_reset <= '1';-- reset the coutner?
 
 				WHEN waiting =>
 					if(start'EVENT AND start = '1') then
-						next_state <= A;
+						next_state <= addressWrite;
 						count_reset <= '1';
 					else
 						next_state <= present_state;
@@ -144,38 +144,38 @@ architecture behavior of ADC_controller is
 		begin
 			count_reset <= '0';
 			case(present_state) is
-				WHEN A =>
+				WHEN addressWrite =>
 	    				MSG_I <= '0';					-- set signal default values
 	    				STB_I <= '0';					-- inactive
 					SRST <= '0';					-- inactive
 					A_I <= addrAD2 & write_Bit;		-- 0x50 address plus '0' for write
 					D_I <= writeCfg;				-- 0x10 configuration register (convert Vin0)
 					
-				WHEN B =>			
+				WHEN resetState =>			
 					SRST <= '1';
 						
-				WHEN C =>
+				WHEN resetWait =>
 					SRST <= '0';
 					
-				WHEN D =>
+				WHEN configWrite =>
 					STB_I <= '1';							-- start config write operation
 				
-				WHEN E =>
+				WHEN configWait =>
 					STB_I <= '0';
 
-				WHEN F =>
+				WHEN startRead =>
 					A_I <= addrAD2 & read_Bit;					-- 0x50 address plus '1' for read		
 					MSG_I <= '1';								-- signal multi-byte read
 					STB_I <= '1';								-- start read operation
 				
-				WHEN G =>			
+				WHEN msgLow =>			
 					MSG_I <= '0';								-- leave strobe high for multi-byte operation
 
-				WHEN H =>
-					STB_I <= '0';								-- STB, I'm not sure why
+				WHEN msbRead =>
+					STB_I <= '0';								-- STB, lsbRead'm not sure why
 					data_out(15 downto 8) <= D_O;				-- load MSB data read
 
-				WHEN I =>
+				WHEN lsbRead =>
 					data_out(7 downto 0) <= D_O;					-- load LSB data read
 
 				WHEN waiting =>
