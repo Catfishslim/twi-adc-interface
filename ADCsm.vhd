@@ -24,14 +24,21 @@ architecture Behavioral of ADC_controller is
 	
 	type state_type is (idle, configWrite, readSig, msbRead, lsbRead);
 	signal present_state, next_state : state_type;
+	signal count_reset : std_logic;
 
-	constant addrAD2	 : STD_LOGIC_VECTOR(6 downto 0) := "0101000";	-- TWI address for the ADC
-  constant writeCfg	 : STD_LOGIC_VECTOR(7 downto 0) := "00010000";	-- configuration register value for the ADC - read VIN0
-  constant read_Bit  : STD_LOGIC := '1';
-  constant write_Bit : STD_LOGIC := '0';
+	constant addrAD2	 : std_logic_vector(6 downto 0) := "0101000";	-- TWI address for the ADC
+  constant writeCfg	 : Std_logic_vector(7 downto 0) := "00010000";	-- configuration register value for the ADC - read VIN0
+  constant read_Bit  : std_logic := '1';
+  constant write_Bit : std_logic := '0';
+
+  constant config_wait : integer := 10;
+  constant srst_wait : integer := 2;
+  constant stb_wait : integer := 2;
+  constant bus_wait : integer := 1200;
+  constant msg_wait : integer := 510;
 
   procedure waitclocks(signal clock : std_logic;
-                       N : INTEGER) is
+                       N : integer) is
 		begin
 			for i in 1 to N loop
 				wait until falling_edge(clock);	
@@ -49,13 +56,23 @@ architecture Behavioral of ADC_controller is
 	    end if;  
 	 end process clocked;
 
+	 counter : process(clk, count_reset)
+	 	begin
+	 		if(count_reset='1') then 
+       count <= 0;
+    	elsif(rising_edge(clk)) then
+      	count <= count + 1;
+    END IF;  
+
+	 	end process counter;
+
 	nextStateDecode: process (start,done_o)
 		begin
 			next_state <= present_state;	--default is to stay in current state
 
 			case(present_state) is
 				when idle => 
-					if(rising_edge(start)) then
+					if(rising_edge(start)) then --can't do rising edge
 						next_state <= configWrite;
 					end if;
 				when configWrite =>
@@ -71,7 +88,6 @@ architecture Behavioral of ADC_controller is
 						next_state <= lsbRead;
 					end if;
 				when lsbRead =>
-					waitclocks(clk, 2);
 					next_state <= idle;	--might have to add a delay to ensure that the data is properly read
 			end case;
 	end process nextStateDecode;
