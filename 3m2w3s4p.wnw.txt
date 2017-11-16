@@ -1,0 +1,21 @@
+﻿Revert "Merge branch 'trippsbranch'"
+
+This reverts commit 94221757cf102e86041aa61b9f25ae43df7d8ff9, reversing
+changes made to 0854028360397cf7cc5c780b147f6fafab87adae.
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+# On branch master
+# Your branch is ahead of 'origin/master' by 2 commits.
+#   (use "git push" to publish your local commits)
+#
+ Changes to be committed:
+	modified:   ADCsm.vhd
+
+	git is harder than I thought
+
+# Untracked files:
+#	1wftaogw.sid.txt
+#	yxizfm3r.i5r.txt
+#
+

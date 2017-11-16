@@ -1,0 +1,20 @@
+﻿Revert "Merge remote-tracking branch 'refs/remotes/origin/TrippsBranch'"
+
+This reverts commit 8621973ecb575c9e20dd8296bf1360d956e7c75a, reversing
+changes made to 480c020c8d06a93774e2385ab7d069ee0beb78fc.
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+# On branch master
+# Your branch is ahead of 'origin/master' by 2 commits.
+#   (use "git push" to publish your local commits)
+#
+ Changes to be committed:
+	deleted:    ADC_Response.vhd
+	deleted:    ADC_TWI_Structural.vhd
+	modified:   ADCsm.vhd
+	deleted:    TWICtl.vhd
+	deleted:    clock_divider.vhd
+	deleted:    synth_clock.vhd
+
+
