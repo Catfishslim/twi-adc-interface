@@ -19,14 +19,14 @@ end adc_controller;
 
 architecture behavior of ADC_controller is
 	
-	type state_type is (waiting, addressWrite, resetState, resetWait, configWrite, configWait, startRead, msgLow, msbRead, lsbRead);
+	type state_type is (waiting, addressWrite, resetState, resetWait, configWrite, configWait, startRead, msgLow, readWait, msbRead, lsbRead);
 	signal present_state, next_state : state_type;
 
 	constant addrAD2	 : STD_LOGIC_VECTOR(6 downto 0) := "0101000";	-- TWI address for the ADC
   	constant writeCfg	 : STD_LOGIC_VECTOR(7 downto 0) := "00010000";	-- configuration register value for the ADC - read VIN0
   	constant read_Bit  : STD_LOGIC := '1';
   	constant write_Bit : STD_LOGIC := '0';
-	SIGNAL count_reset : std_logic;
+	SIGNAL count_reset : std_logic := '0';
 	SIGNAL count : integer := 0;
 
 
@@ -44,13 +44,14 @@ architecture behavior of ADC_controller is
 	-- Counts the number of clock edges
 	counter : PROCESS(clk)
 		BEGIN
-			IF(rising_edge(clk)) THEN
-				IF(count_reset='1') THEN 
+			IF(count_reset='1' ) THEN 
 					count <= 0;
-				ELSE
+					--count_reset <='0';
+
+			ELSIF(rising_edge(clk)) THEN
 					count <= count + 1;
 				END IF;
-			END IF;  
+			  
 	END PROCESS counter;
 
 	clocked : process(clk, reset)
@@ -113,13 +114,20 @@ architecture behavior of ADC_controller is
 					end if;
 				WHEN msgLow =>			
 					if(DONE_O'event and DONE_O='0')then-- wait until DONE_O_sig'event and DONE_O_sig='0';	-- wait until TWI controller signals done
-						next_state <= msbRead;
+						next_state <= readWait;
 						count_reset <= '1';-- reset the counter					
 					else
 						next_state <= present_state;
 					end if;
+				WHEN readWait =>
+					if (count < 510) then -- waitclocks(clk_sig, 510);
+						next_state <= present_state;
+					else
+							next_state <= msbRead;
+							count_reset <= '1';
+					end if;
 				WHEN msbRead =>
-					if(count > 510) then-- waitclocks(clk_sig, 510);						-- you have to go past 1/2 SCL cycle before dropping
+					if(DONE_O'event and DONE_O = '0') then						-- you have to go past 1/2 SCL cycle before dropping
 						next_state <= lsbRead;
 						count_reset <= '1';
 					else
@@ -141,7 +149,7 @@ architecture behavior of ADC_controller is
 
 	outputDecode: process (present_state)
 		begin
-			count_reset <= '0';
+			--count_reset <= '0';
 			case(present_state) is
 				WHEN addressWrite =>
 	    				MSG_I <= '0';					-- set signal default values
@@ -170,6 +178,8 @@ architecture behavior of ADC_controller is
 				WHEN msgLow =>			
 					MSG_I <= '0';								-- leave strobe high for multi-byte operation
 
+				WHEN readWait =>
+
 				WHEN msbRead =>
 					STB_I <= '0';								-- STB, lsbRead'm not sure why
 					data_out(15 downto 8) <= D_O;				-- load MSB data read
@@ -178,7 +188,7 @@ architecture behavior of ADC_controller is
 					data_out(7 downto 0) <= D_O;					-- load LSB data read
 
 				WHEN waiting =>
-					count_reset <= '1';-- reset the counter
+					--count_reset <= '1';-- reset the counter
 
 					
 			end case;

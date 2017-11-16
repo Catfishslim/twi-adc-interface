@@ -25,7 +25,7 @@ ENTITY clock_divider is
 --  GENERIC(DIVISOR : positive := 100);
 ----------------------------------------
 -- use these values for synthesis ------
-  GENERIC(DIVISOR : positive := 1000000);--10000); In reality use the 5000000 to obtain 20 Hz clock
+  GENERIC(DIVISOR : positive := 5000000);--10000); In reality use the 5000000 to obtain 20 Hz clock
 -----------------------------------------
   PORT(mclk : IN  std_logic;
        sclk : OUT std_logic);
