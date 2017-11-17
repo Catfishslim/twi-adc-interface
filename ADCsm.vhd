@@ -20,7 +20,7 @@ end ADC_controller;
 
 architecture behavior of ADC_controller is
 	
-	type state_type is (waiting, A, B, C, D, E, F, G, H, I);
+	type state_type is (waiting, A, B, C, D, E, F, G, H, I, J);
 	signal present_state, next_state : state_type;
 
 	constant addrAD2	 : STD_LOGIC_VECTOR(6 downto 0) := "0101000";	-- TWI address for the ADC
@@ -68,7 +68,7 @@ architecture behavior of ADC_controller is
 		count_reset <= '0';
 			case(present_state) is
 				WHEN A =>
-					if(count < 10) then
+					if(count <= 10) then
 						next_state <= present_state;
 					else
 						next_state <= B;-- waitclocks(clk_sig, 10);
@@ -76,7 +76,7 @@ architecture behavior of ADC_controller is
 					end if;
 
 				WHEN B =>			
-					if(count < 2) then
+					if(count <= 2) then
 						next_state <= present_state;
 					else
 						next_state <= C;--waitclocks(clk_sig, 2);
@@ -84,7 +84,7 @@ architecture behavior of ADC_controller is
 					end if;
 						
 				WHEN C =>
-					if(count < 1200) then
+					if(count <= 1200) then
 						next_state <= present_state;
 					else
 						next_state <= D;			-- wait > 1000 clocks for bus to be "free"
@@ -92,7 +92,7 @@ architecture behavior of ADC_controller is
 					end if;
 					
 				WHEN D =>
-					if(count < 2) then
+					if(count <= 2) then
 						next_state <= present_state;
 					else
 						next_state <= E;--waitclocks(clk_sig, 2);							-- two cycles for strobe to be captured
@@ -106,7 +106,7 @@ architecture behavior of ADC_controller is
 						next_state <= present_state;
 					end if;
 				WHEN F =>
-					if(count < 2) then
+					if(count <= 2) then
 						next_state <= present_state;
 					else
 						next_state <= G;-- waitclocks(clk_sig, 2);
@@ -127,6 +127,14 @@ architecture behavior of ADC_controller is
 						next_state <= present_state;
 					end if;
 				WHEN I =>
+					if(DONE_O'event and DONE_O = '0') THEN
+						next_state <= J;
+						count_reset <= '1';-- reset the clock
+					else
+						next_state <= present_state;
+					end if;
+
+				WHEN J =>
 					next_state <= waiting;
 					count_reset <= '1';-- reset the coutner?
 
@@ -142,11 +150,11 @@ architecture behavior of ADC_controller is
 
 	outputDecode: process (present_state)
 		begin
-			count_reset <= '0';
+			--count_reset <= '0'; I dont think this should be here
 			case(present_state) is
 				WHEN A =>
-	    				MSG_I <= '0';					-- set signal default values
-	    				STB_I <= '0';					-- inactive
+	    			MSG_I <= '0';					-- set signal default values
+	    			STB_I <= '0';					-- inactive
 					SRST <= '0';					-- inactive
 					A_I <= addrAD2 & write_Bit;		-- 0x50 address plus '0' for write
 					D_I <= writeCfg;				-- 0x10 configuration register (convert Vin0)
@@ -172,14 +180,16 @@ architecture behavior of ADC_controller is
 					MSG_I <= '0';								-- leave strobe high for multi-byte operation
 
 				WHEN H =>
+
+				WHEN I =>
 					STB_I <= '0';								-- STB, I'm not sure why
 					data_out(15 downto 8) <= D_O;				-- load MSB data read
 
-				WHEN I =>
+				WHEN J =>
 					data_out(7 downto 0) <= D_O;					-- load LSB data read
 
 				WHEN waiting =>
-					count_reset <= '1';-- reset the counter
+					--count_reset <= '1';-- reset the counter
 
 					
 			end case;
