@@ -31,20 +31,14 @@ architecture behavior of ADC_controller is
 
 
 
-  	procedure waitclocks(signal clock : std_logic;
-             	          N : INTEGER) is
-			begin
-				for lsbRead in 1 to N loop
-					wait until falling_edge(clock);	
-				end loop;
-	end waitclocks;
+  
 
   begin
 
 	-- Counts the number of clock edges
 	counter : PROCESS(clk)
 		BEGIN
-			IF(count_reset='1' ) THEN 
+			IF(count_reset='1' and count_reset'event ) THEN 
 					count <= 0;
 					--count_reset <='0';
 
@@ -61,7 +55,7 @@ architecture behavior of ADC_controller is
 	    elsif(rising_edge(clk)) then
 	      present_state <= next_state;
 	    end if;  
-	 end process clocked;
+	 end process clocked;		
 
 	nextStateDecode: process (start,done_o, present_state, count)
 		begin

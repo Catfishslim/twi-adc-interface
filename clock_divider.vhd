@@ -25,7 +25,7 @@ ENTITY clock_divider is
 --  GENERIC(DIVISOR : positive := 100);
 ----------------------------------------
 -- use these values for synthesis ------
-  GENERIC(DIVISOR : positive := 5000000);--10000); In reality use the 5000000 to obtain 20 Hz clock
+  GENERIC(DIVISOR : positive := 1000000);--10000); In reality use the 5000000 to obtain 20 Hz clock
 -----------------------------------------
   PORT(mclk : IN  std_logic;
        sclk : OUT std_logic);
@@ -39,7 +39,8 @@ ARCHITECTURE behavior OF clock_divider IS
 
     div_clk : PROCESS(mclk)
     
-      VARIABLE count : integer RANGE 0 to DIVISOR/2 := 0;
+      VARIABLE count : integer RANGE 0 to DIVISOR/2 := DIVISOR/2 - 50; -- so I don't have to simulate for so long to get a rising edge
+
 
       BEGIN
         IF(rising_edge(mclk)) THEN
